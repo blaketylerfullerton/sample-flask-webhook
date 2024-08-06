@@ -123,7 +123,7 @@ def webhook():
                             "Duration": duration_str,
                             "Summary": summary,
                             "Transcript": transcript,
-                            "Recording": [{"url": call_data.get('recording_url', '')}],
+                          #  "Recording": [{"url": call_data.get('recording_url', '')}],
                             "Number": call_data.get('from_number', ''),
                             "End Reason": call_data.get('disconnection_reason', ''),
                             "Call SID": call_data.get('metadata', {}).get('twilio_call_sid', ''),
