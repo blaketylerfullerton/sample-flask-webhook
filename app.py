@@ -168,12 +168,16 @@ def forward_webhook():
             try:
                 response = requests.post(FORWARD_URL, json=data)
                 if response.status_code == 200:
+                    print("Forwarding Webhook, needs to be in Go High Level")
                     return jsonify({"status": "forwarded", "message": "Webhook forwarded successfully"}), 200
                 else:
+                    print("Failed to forward webhook")
                     return jsonify({"status": "error", "message": f"Failed to forward webhook. Status code: {response.status_code}"}), 500
             except requests.RequestException as e:
+                print("Failed to forward")
                 return jsonify({"status": "error", "message": f"Failed to forward webhook: {str(e)}"}), 500
         else:
+            print("Webhook did not meet forwarding criteria")
             return jsonify({"status": "not forwarded", "message": "Webhook did not meet forwarding criteria"}), 200
 
 def should_forward(transcript):
