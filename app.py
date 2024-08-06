@@ -38,7 +38,7 @@ def webhook():
         # Send the transcript to OpenAI for summarization
         try:
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant that summarizes call transcripts."},
                     {"role": "user", "content": f'''# Liv Forever Health: Call Analysis and Data Extraction Prompt
