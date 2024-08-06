@@ -29,6 +29,8 @@ def webhook():
             return jsonify({"status": "success", "message": "Event ignored"}), 200
         # Extract the transcript from the webhook data
         transcript = data['call']['transcript']
+        call_data = data['call']
+
         # Check if API key is set
         if not openai.api_key:
             return jsonify({"status": "error", "message": "OpenAI API key not set"}), 500
