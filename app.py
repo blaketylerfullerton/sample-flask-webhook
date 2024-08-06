@@ -160,6 +160,10 @@ def forward_webhook():
         data = request.json
         transcript = data.get('transcript', '')
 
+         if data.get('event') != 'call_ended':
+            print("Not call ended..")
+            return jsonify({"status": "success", "message": "Event ignored"}), 200
+
         if not transcript:
             return jsonify({"status": "error", "message": "No transcript provided"}), 400
 
