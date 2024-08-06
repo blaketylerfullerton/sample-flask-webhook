@@ -11,7 +11,13 @@ AIRTABLE_BASE_KEY = os.getenv('AIRTABLE_BASE_KEY')
 AIRTABLE_TABLE_NAME = os.getenv('AIRTABLE_TABLE_NAME')
 AIRTABLE_API_KEY = os.getenv('AIRTABLE_API_KEY')
 
+#GHL Data
+GHL_API_KEY = os.getenv('GHL_API_KEY')
+GHL_LOCATION_ID = os.getenv('GHL_LOCATION_ID')
+
+
 AIRTABLE_URL = f"https://api.airtable.com/v0/appONw8OOzv9YX4yT/Call%20Logs"
+GHL_API_URL = "https://rest.gohighlevel.com/v1/opportunities/"
 
 from flask import render_template
 
@@ -99,59 +105,50 @@ def webhook():
                         Note: Ensure that no specific health information is included in the extracted data.\n\n{transcript}'''}
                 ]
             )
-            # Extract the summary from the OpenAI response
             summary = response.choices[0].message['content']
-            # You can now store or process the summary as needed
-            print("Call Summary:", summary)
-            # Optionally, you can add the summary to the response
             data['call']['summary'] = summary
 
-             # Calculate durations
             start_time = datetime.fromtimestamp(call_data['start_timestamp'] / 1000)
             end_time = datetime.fromtimestamp(call_data['end_timestamp'] / 1000)
             duration = end_time - start_time
             duration_str = f"{duration.seconds // 60}m {duration.seconds % 60}s"
-            
 
-            # Prepare data for Airtable
-            airtable_data = {
-                "records": [
-                    {
-                        "fields": {
-                            "Date": start_time.isoformat(),
-                            "Duration AI": duration_str,
-                            "Duration": duration_str,
-                            "Summary": summary,
-                            "Transcript": transcript,
-                            "Recording ": [  # Note the space after "Recording"
-                                {
-                                    "url": call_data.get('recording_url', ''),
-                                    "filename": f"Recording {call_data['start_timestamp']}"
-                                }
-                            ],                            "Number": call_data.get('from_number', ''),
-                            "End Reason": call_data.get('disconnection_reason', ''),
-                            "Call SID": call_data.get('metadata', {}).get('twilio_call_sid', ''),
-                            "Start Timestamp": str(call_data['start_timestamp'])
-                        }
-                    }
+            # Prepare data for Go High Level
+            ghl_data = {
+                "name": f"Call from {call_data.get('from_number', 'Unknown')}",
+                "monetaryValue": 0,  # Set an appropriate value if available
+                "pipelineStageId": "",  # Set the appropriate pipeline stage ID
+                "status": "open",
+                "source": "Phone Call",
+                "customFields": [
+                    {"key": "call_date", "field_value": start_time.isoformat()},
+                    {"key": "call_duration", "field_value": duration_str},
+                    {"key": "call_summary", "field_value": summary},
+                    {"key": "call_transcript", "field_value": transcript},
+                    {"key": "recording_url", "field_value": call_data.get('recording_url', '')},
+                    {"key": "caller_number", "field_value": call_data.get('from_number', '')},
+                    {"key": "end_reason", "field_value": call_data.get('disconnection_reason', '')},
+                    {"key": "call_sid", "field_value": call_data.get('metadata', {}).get('twilio_call_sid', '')}
                 ]
             }
-              # Send data to Airtable
+
+            # Send data to Go High Level
             headers = {
-                "Authorization": f"Bearer {AIRTABLE_API_KEY}",
-                "Content-Type": "application/json"
+                "Authorization": f"Bearer {GHL_API_KEY}",
+                "Content-Type": "application/json",
+                "Version": "2021-07-28"
             }
-            airtable_response = requests.post(AIRTABLE_URL, json=airtable_data, headers=headers)
-            if airtable_response.status_code == 200:
-                print("Data successfully sent to Airtable")
+            ghl_response = requests.post(f"{GHL_API_URL}?locationId={GHL_LOCATION_ID}", json=ghl_data, headers=headers)
+            if ghl_response.status_code == 200:
+                print("Data successfully sent to Go High Level")
             else:
-                print(f"Failed to send data to Airtable. Status code: {airtable_response.status_code}")
-                print(f"Response: {airtable_response.text}")
+                print(f"Failed to send data to Go High Level. Status code: {ghl_response.status_code}")
+                print(f"Response: {ghl_response.text}")
 
             return jsonify({"status": "success", "data": data}), 200
         except Exception as e:
-            print(f"Error in OpenAI API call: {str(e)}")
-            return jsonify({"status": "error", "message": "Failed to generate summary"}), 500
+            print(f"Error in API call: {str(e)}")
+            return jsonify({"status": "error", "message": "Failed to process call data"}), 500
     else:
         return jsonify({"status": "error", "message": "Method not allowed"}), 405
 
