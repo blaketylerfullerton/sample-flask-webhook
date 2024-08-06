@@ -14,6 +14,7 @@ AIRTABLE_API_KEY = os.getenv('AIRTABLE_API_KEY')
 #GHL Data
 GHL_API_KEY = os.getenv('GHL_API_KEY')
 GHL_LOCATION_ID = os.getenv('GHL_LOCATION_ID')
+FORWARD_URL = 'https://services.leadconnectorhq.com/hooks/dX3FHZlxkSxr6Rt4xWhT/webhook-trigger/be4a38de-50d0-4c5a-94c7-d88f2281c4f5'  # URL to forward the webhook to
 
 
 AIRTABLE_URL = f"https://api.airtable.com/v0/appONw8OOzv9YX4yT/Call%20Logs"
@@ -152,6 +153,50 @@ def webhook():
             return jsonify({"status": "error", "message": "Failed to process call data"}), 500
     else:
         return jsonify({"status": "error", "message": "Method not allowed"}), 405
+
+@app.route('/forward-webhook', methods=['POST'])
+def forward_webhook():
+    if request.method == 'POST':
+        data = request.json
+        transcript = data.get('transcript', '')
+
+        if not transcript:
+            return jsonify({"status": "error", "message": "No transcript provided"}), 400
+
+        if should_forward(transcript):
+            # Forward the webhook
+            try:
+                response = requests.post(FORWARD_URL, json=data)
+                if response.status_code == 200:
+                    return jsonify({"status": "forwarded", "message": "Webhook forwarded successfully"}), 200
+                else:
+                    return jsonify({"status": "error", "message": f"Failed to forward webhook. Status code: {response.status_code}"}), 500
+            except requests.RequestException as e:
+                return jsonify({"status": "error", "message": f"Failed to forward webhook: {str(e)}"}), 500
+        else:
+            return jsonify({"status": "not forwarded", "message": "Webhook did not meet forwarding criteria"}), 200
+
+def should_forward(transcript):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # or whichever model you prefer
+                    {"role": "system", "content": "You are an AI assistant that determines if a call transcript contains a request for scheduling an appointment or getting information about appointments."},
+                {"role": "user", "content": f"""Analyze the following transcript and determine if the caller is requesting information about getting an appointment or wanting to schedule an appointment. 
+
+Respond with 'Yes' ONLY if the transcript contains a clear request or inquiry about scheduling or getting information about an appointment. Otherwise, respond with 'No'.
+
+Transcript: {transcript}
+
+Remember, respond ONLY with 'Yes' or 'No'.
+"""}
+            max_tokens=3 # We only need a short response
+        )
+        decision = response.choices[0].message['content'].strip().lower()
+        return decision == 'yes'
+    except Exception as e:
+        print(f"Error in should_forward: {str(e)}")
+        return False  # Default to not forwarding in case of an error
+
 
 if __name__ == "__main__":
     app.run(debug=True)
