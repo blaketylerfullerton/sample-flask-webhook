@@ -1,4 +1,5 @@
-from flask import Flask
+from flask import Flask, request, jsonify
+
 from flask import render_template
 
 app = Flask(__name__)
@@ -7,7 +8,7 @@ app = Flask(__name__)
 @app.route("/")
 def hello_world():
     return render_template("index.html")
-    
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     if request.method == 'POST':
