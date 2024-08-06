@@ -180,7 +180,8 @@ def should_forward(transcript):
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",  # or whichever model you prefer
-                    {"role": "system", "content": "You are an AI assistant that determines if a call transcript contains a request for scheduling an appointment or getting information about appointments."},
+            messages=[
+                {"role": "system", "content": "You are an AI assistant that determines if a call transcript contains a request for scheduling an appointment or getting information about appointments."},
                 {"role": "user", "content": f"""Analyze the following transcript and determine if the caller is requesting information about getting an appointment or wanting to schedule an appointment. 
 
 Respond with 'Yes' ONLY if the transcript contains a clear request or inquiry about scheduling or getting information about an appointment. Otherwise, respond with 'No'.
@@ -189,14 +190,13 @@ Transcript: {transcript}
 
 Remember, respond ONLY with 'Yes' or 'No'.
 """}
-            max_tokens=3 # We only need a short response
+            ],
+            max_tokens=3
         )
         decision = response.choices[0].message['content'].strip().lower()
         return decision == 'yes'
     except Exception as e:
         print(f"Error in should_forward: {str(e)}")
-        return False  # Default to not forwarding in case of an error
-
-
+        return False  # Def
 if __name__ == "__main__":
     app.run(debug=True)
